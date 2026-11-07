@@ -155,11 +155,15 @@ export const CardCanvas: React.FC<CardCanvasProps> = ({
   };
 
   const handleTouchStart = (e: React.TouchEvent, element: CardTextElement) => {
+    e.stopPropagation();
     const touch = e.touches[0];
     if (!touch) return;
     startDrag(touch.clientX, touch.clientY, element);
 
     const onTouchMove = (moveEvent: TouchEvent) => {
+      if (moveEvent.cancelable) {
+        moveEvent.preventDefault();
+      }
       const moveTouch = moveEvent.touches[0];
       if (moveTouch) {
         updateDrag(moveTouch.clientX, moveTouch.clientY, element.id);
@@ -172,7 +176,7 @@ export const CardCanvas: React.FC<CardCanvasProps> = ({
       window.removeEventListener('touchend', onTouchEnd);
     };
 
-    window.addEventListener('touchmove', onTouchMove, { passive: true });
+    window.addEventListener('touchmove', onTouchMove, { passive: false });
     window.addEventListener('touchend', onTouchEnd);
   };
 
@@ -444,11 +448,11 @@ export const CardCanvas: React.FC<CardCanvasProps> = ({
                     key={element.id}
                     onMouseDown={(e) => handleMouseDown(e, element)}
                     onTouchStart={(e) => handleTouchStart(e, element)}
-                    className={`absolute transform -translate-x-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing transition-shadow duration-150 group px-2 py-0.5 rounded ${
+                    className={`absolute transform -translate-x-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing transition-shadow duration-150 group px-2 py-0.5 rounded touch-none select-none ${
                       isSelected
-                        ? 'ring-2 ring-gold-400 bg-gold-400/10 shadow-sm'
+                        ? 'ring-2 ring-gold-400 bg-gold-400/10 shadow-sm animate-pulse-gold'
                         : 'hover:ring-1 hover:ring-gold-300/60'
-                    } ${isDragging ? 'opacity-85 scale-[1.02] ring-2 ring-gold-500' : ''}`}
+                    } ${isDragging ? 'opacity-90 scale-[1.03] ring-2 ring-gold-500 shadow-lg z-30' : ''}`}
                     style={{
                       left: `${element.xPercent}%`,
                       top: `${element.yPercent}%`,
@@ -457,14 +461,14 @@ export const CardCanvas: React.FC<CardCanvasProps> = ({
                   >
                     {/* Move Handle Tag */}
                     <span
-                      className={`absolute -top-4 left-1/2 transform -translate-x-1/2 text-[9px] font-sans font-medium px-1.5 py-0.2 rounded whitespace-nowrap pointer-events-none transition-opacity flex items-center gap-1 ${
+                      className={`absolute -top-5 left-1/2 transform -translate-x-1/2 text-[9px] font-sans font-medium px-2 py-0.5 rounded-full whitespace-nowrap pointer-events-none transition-all flex items-center gap-1 shadow-xs ${
                         isSelected
-                          ? 'opacity-100 bg-gold-600 text-white'
+                          ? 'opacity-100 bg-gold-600 text-white scale-100'
                           : 'opacity-0 group-hover:opacity-100 bg-stone-800 text-stone-200'
                       }`}
                     >
                       <Move className="w-2.5 h-2.5" />
-                      <span>{element.label}</span>
+                      <span>{element.label} (Drag to Move)</span>
                     </span>
 
                     {/* Rendered Text */}
