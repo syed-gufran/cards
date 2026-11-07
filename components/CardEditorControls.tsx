@@ -12,6 +12,16 @@ import {
 import { INDIAN_WORDING_LIBRARY } from '@/data/indian-wording-library';
 import { SUITE_PAGE_LABELS } from '@/utils/suite-pages';
 import { MotifIcon } from './MotifIcons';
+import {
+  COLOR_THEME_PRESETS,
+  TEXT_FORMAT_PRESETS,
+  ColorThemePreset,
+  TextFormatPreset,
+} from '@/data/card-presets';
+import {
+  SUPPORTED_LANGUAGES,
+  SupportedLanguage,
+} from '@/utils/card-translator';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Type,
@@ -26,6 +36,8 @@ import {
   Trash2,
   BookOpen,
   Check,
+  CheckCircle2,
+  Globe,
   AlignLeft,
   AlignCenter,
   AlignRight,
@@ -55,6 +67,10 @@ interface CardEditorControlsProps {
   onUndo: () => void;
   onRedo: () => void;
   onReset: () => void;
+  selectedLanguage?: SupportedLanguage;
+  onTranslateLanguage?: (lang: SupportedLanguage) => void;
+  onApplyColorTheme?: (theme: ColorThemePreset) => void;
+  onApplyTextFormat?: (format: TextFormatPreset) => void;
 }
 
 export const CardEditorControls: React.FC<CardEditorControlsProps> = ({
@@ -72,8 +88,12 @@ export const CardEditorControls: React.FC<CardEditorControlsProps> = ({
   onUndo,
   onRedo,
   onReset,
+  selectedLanguage = 'en',
+  onTranslateLanguage,
+  onApplyColorTheme,
+  onApplyTextFormat,
 }) => {
-  const [activeTab, setActiveTab] = useState<'text' | 'typography' | 'position' | 'events'>('text');
+  const [activeTab, setActiveTab] = useState<'text' | 'typography' | 'position' | 'formats' | 'events'>('text');
   const [showWordingModal, setShowWordingModal] = useState<boolean>(false);
   const [wordingFaith, setWordingFaith] = useState<string>('Hindu');
 
@@ -261,6 +281,19 @@ export const CardEditorControls: React.FC<CardEditorControlsProps> = ({
 
         <button
           type="button"
+          onClick={() => setActiveTab('formats')}
+          className={`flex items-center gap-1.5 py-3 px-3 border-b-2 text-xs font-medium whitespace-nowrap transition-colors ${
+            activeTab === 'formats'
+              ? 'border-gold-500 text-gold-700 font-semibold'
+              : 'border-transparent text-stone-500 hover:text-stone-900'
+          }`}
+        >
+          <Sparkles className="w-4 h-4" />
+          <span>Presets &amp; Colors</span>
+        </button>
+
+        <button
+          type="button"
           onClick={() => setActiveTab('events')}
           className={`flex items-center gap-1.5 py-3 px-3 border-b-2 text-xs font-medium whitespace-nowrap transition-colors ${
             activeTab === 'events'
@@ -287,6 +320,35 @@ export const CardEditorControls: React.FC<CardEditorControlsProps> = ({
             {/* TAB 1: WORDING & TEXT FIELDS */}
         {activeTab === 'text' && (
           <div className="space-y-4">
+            {/* 1-Click Multi-Language Converter Strip */}
+            {onTranslateLanguage && (
+              <div className="p-3 bg-stone-900 text-white rounded-xl border border-gold-500/30 space-y-2 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-serif font-bold text-gold-300 flex items-center gap-1.5">
+                    <Globe className="w-3.5 h-3.5 text-gold-400" />
+                    <span>Convert Entire Card Language</span>
+                  </span>
+                  <span className="text-[10px] text-stone-400 font-mono">1-Click Convert</span>
+                </div>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {SUPPORTED_LANGUAGES.map((lang) => (
+                    <button
+                      key={lang.code}
+                      type="button"
+                      onClick={() => onTranslateLanguage(lang.code)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+                        selectedLanguage === lang.code
+                          ? 'bg-gradient-to-r from-gold-500 to-amber-500 text-stone-950 font-bold shadow-xs'
+                          : 'bg-stone-800 hover:bg-stone-700 text-stone-300 border border-stone-700'
+                      }`}
+                    >
+                      <span>{lang.flag} {lang.nativeName}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Baraat Card Quick Info Banner */}
             {currentSuitePage === 'baraatCard' && (
               <div className="p-3 bg-amber-50 border border-amber-300 rounded-xl space-y-1">
@@ -738,6 +800,136 @@ export const CardEditorControls: React.FC<CardEditorControlsProps> = ({
             <div className="p-3 bg-stone-50 border border-stone-200 rounded-xl flex items-center gap-2 text-stone-600 text-xs">
               <Move className="w-4 h-4 text-gold-600 shrink-0" />
               <span>You can also click &amp; drag this text block anywhere on the card canvas directly.</span>
+            </div>
+          </div>
+        )}
+
+        {/* TAB: PRESETS, FORMATS & COLORWAYS */}
+        {activeTab === 'formats' && (
+          <div className="space-y-6">
+            {/* 1. Multi-Language Converter */}
+            <div className="p-4 bg-stone-900 text-white rounded-2xl border border-gold-500/30 space-y-3 shadow-md">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-serif font-bold text-sm text-gold-300 flex items-center gap-1.5">
+                    <Globe className="w-4 h-4 text-gold-400" />
+                    <span>Convert Entire Card Language</span>
+                  </h4>
+                  <p className="text-[11px] text-stone-400 mt-0.5">
+                    Translates all card text to your chosen regional script with 1 tap.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1">
+                {SUPPORTED_LANGUAGES.map((lang) => {
+                  const isSelected = selectedLanguage === lang.code;
+                  return (
+                    <button
+                      key={lang.code}
+                      type="button"
+                      onClick={() => onTranslateLanguage && onTranslateLanguage(lang.code)}
+                      className={`p-2.5 rounded-xl border text-left transition-all ${
+                        isSelected
+                          ? 'border-gold-400 bg-gold-500/20 text-white ring-1 ring-gold-400'
+                          : 'border-stone-800 bg-stone-800/80 hover:bg-stone-800 text-stone-300 hover:border-stone-700'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-base">{lang.flag}</span>
+                        {isSelected && <Check className="w-3.5 h-3.5 text-gold-400" />}
+                      </div>
+                      <div className="font-serif font-bold text-xs">{lang.name}</div>
+                      <div className="text-[10px] text-gold-300/80">{lang.nativeName}</div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* 2. Text Formats & Wording Layouts */}
+            <div className="space-y-3">
+              <div>
+                <h4 className="font-serif font-bold text-sm text-stone-900 flex items-center gap-1.5">
+                  <AlignLeft className="w-4 h-4 text-gold-600" />
+                  <span>Text &amp; Layout Formats</span>
+                </h4>
+                <p className="text-[11px] text-stone-500">
+                  Switch the invitation hierarchy, wording tone, and typography preset.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                {TEXT_FORMAT_PRESETS.map((fmt) => (
+                  <div
+                    key={fmt.id}
+                    onClick={() => onApplyTextFormat && onApplyTextFormat(fmt)}
+                    className="p-3 bg-white border border-stone-200 hover:border-gold-400 rounded-xl cursor-pointer transition-all hover:shadow-xs group"
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-serif font-bold text-xs text-stone-900 group-hover:text-gold-700 transition-colors">
+                          {fmt.name}
+                        </span>
+                        <span className="text-[9px] bg-stone-100 text-stone-600 px-2 py-0.5 rounded-full font-mono">
+                          {fmt.badge}
+                        </span>
+                      </div>
+                      <span className="text-[11px] text-gold-700 font-semibold flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
+                        <span>Apply</span>
+                        <ArrowRight className="w-3 h-3" />
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-gold-800 font-medium">
+                      {fmt.tagline}
+                    </p>
+                    <p className="text-[10px] text-stone-500 mt-0.5 line-clamp-1">
+                      {fmt.description}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 3. Royal Color Palettes */}
+            <div className="space-y-3">
+              <div>
+                <h4 className="font-serif font-bold text-sm text-stone-900 flex items-center gap-1.5">
+                  <Palette className="w-4 h-4 text-gold-600" />
+                  <span>Royal Color Combinations</span>
+                </h4>
+                <p className="text-[11px] text-stone-500">
+                  Apply curated Rajputana, Mughal, and temple color themes with matching foil accents.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {COLOR_THEME_PRESETS.map((colorway) => (
+                  <div
+                    key={colorway.id}
+                    onClick={() => onApplyColorTheme && onApplyColorTheme(colorway)}
+                    className="p-2.5 bg-white border border-stone-200 hover:border-gold-400 rounded-xl cursor-pointer transition-all hover:shadow-xs flex items-center gap-2.5 group"
+                  >
+                    <div
+                      className="w-7 h-7 rounded-full border border-stone-300 shadow-inner flex items-center justify-center shrink-0"
+                      style={{ backgroundColor: colorway.backgroundColor }}
+                    >
+                      <div
+                        className="w-2.5 h-2.5 rounded-full"
+                        style={{ backgroundColor: colorway.borderColor }}
+                      />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-serif font-bold text-xs text-stone-900 group-hover:text-gold-700 transition-colors truncate">
+                        {colorway.name}
+                      </div>
+                      <div className="text-[10px] text-stone-500 truncate">
+                        {colorway.borderColor} Foil
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}

@@ -22,6 +22,7 @@ import {
   Camera,
 } from 'lucide-react';
 import { CardScannerModal } from '@/components/CardScannerModal';
+import { CardFormatModal } from '@/components/CardFormatModal';
 
 function GalleryContent() {
   const searchParams = useSearchParams();
@@ -350,94 +351,12 @@ function GalleryContent() {
         )}
       </div>
 
-      {/* QUICK PREVIEW MODAL */}
-      {previewTemplate && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl relative overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <button
-              type="button"
-              onClick={() => setPreviewTemplate(null)}
-              className="absolute top-5 right-5 text-stone-400 hover:text-stone-700 p-1 rounded-full bg-stone-100 hover:bg-stone-200"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <div className="flex flex-col sm:flex-row gap-6 items-center">
-              {/* Preview Visual */}
-              <div
-                className="relative w-48 sm:w-56 aspect-[5/7] rounded-xl overflow-hidden shadow-lg p-4 flex flex-col justify-between shrink-0"
-                style={{ backgroundColor: previewTemplate.frontDesign.backgroundValue }}
-              >
-                <BorderFrame
-                  style={previewTemplate.frontDesign.borderStyle}
-                  color={previewTemplate.frontDesign.borderColor}
-                  isFoil={previewTemplate.frontDesign.borderFoilEffect}
-                />
-                <div className="flex justify-center z-10 pt-2">
-                  {previewTemplate.frontDesign.motifs[0] && (
-                    <MotifIcon
-                      type={previewTemplate.frontDesign.motifs[0].type}
-                      color={previewTemplate.frontDesign.motifs[0].color}
-                      size={44}
-                    />
-                  )}
-                </div>
-                <div className="text-center z-10 my-auto">
-                  <div
-                    className="font-serif text-lg font-bold"
-                    style={{ color: previewTemplate.frontDesign.borderColor }}
-                  >
-                    {previewTemplate.sampleBrideName.split(' ')[0]} &amp; {previewTemplate.sampleGroomName.split(' ')[0]}
-                  </div>
-                </div>
-              </div>
-
-              {/* Details & Customise Button */}
-              <div className="space-y-4 flex-1">
-                <div>
-                  <span className="text-xs font-mono font-bold text-gold-700 uppercase">
-                    Template ID: {previewTemplate.id}
-                  </span>
-                  <h3 className="font-serif text-2xl font-bold text-stone-900 mt-1">
-                    {previewTemplate.title}
-                  </h3>
-                  <p className="text-xs text-stone-600 leading-relaxed mt-2">
-                    {previewTemplate.description}
-                  </p>
-                </div>
-
-                <div className="space-y-1.5 text-xs text-stone-600 pt-2 border-t border-stone-100">
-                  <div className="flex justify-between">
-                    <span>Category:</span>
-                    <strong className="text-stone-900">{previewTemplate.category}</strong>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Card Dimensions:</span>
-                    <strong className="text-stone-900">{previewTemplate.dimensions.label}</strong>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Base Price:</span>
-                    <strong className="text-stone-900 font-mono">₹{previewTemplate.basePricePerCard} / card</strong>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Sides:</span>
-                    <strong className="text-stone-900">Front &amp; Back (Itinerary)</strong>
-                  </div>
-                </div>
-
-                <div className="pt-3">
-                  <Link
-                    href={`/editor/${previewTemplate.id}`}
-                    className="w-full py-3 px-5 bg-gradient-to-r from-gold-600 to-amber-600 hover:from-gold-700 hover:to-amber-700 text-white font-serif font-bold text-sm rounded-xl shadow-md transition-all text-center block uppercase tracking-wider"
-                  >
-                    Open in Customisation Studio →
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* INTERACTIVE CARD FORMAT & COLORWAY PREVIEW MODAL */}
+      <CardFormatModal
+        template={previewTemplate}
+        isOpen={!!previewTemplate}
+        onClose={() => setPreviewTemplate(null)}
+      />
 
       {/* Camera Card Scanner Modal */}
       <CardScannerModal

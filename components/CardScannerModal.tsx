@@ -39,6 +39,7 @@ export const CardScannerModal: React.FC<CardScannerModalProps> = ({
   const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [isCapturing, setIsCapturing] = useState<boolean>(false);
+  const [isNavigating, setIsNavigating] = useState<boolean>(false);
 
   // Captured snapshot state
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
@@ -146,28 +147,41 @@ export const CardScannerModal: React.FC<CardScannerModalProps> = ({
     }
   };
 
-  // Snap photo from live camera
+  // Snap photo from live camera with image compression
   const handleSnap = () => {
     if (!videoRef.current) return;
     setIsCapturing(true);
 
     const video = videoRef.current;
+    const maxDim = 900;
+    let w = video.videoWidth || 800;
+    let h = video.videoHeight || 1100;
+    if (w > maxDim || h > maxDim) {
+      if (w > h) {
+        h = Math.round((h * maxDim) / w);
+        w = maxDim;
+      } else {
+        w = Math.round((w * maxDim) / h);
+        h = maxDim;
+      }
+    }
+
     const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth || 1200;
-    canvas.height = video.videoHeight || 1600;
+    canvas.width = w;
+    canvas.height = h;
 
     const ctx = canvas.getContext('2d');
     if (ctx) {
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+      ctx.drawImage(video, 0, 0, w, h);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.65);
       setCapturedImage(dataUrl);
-      analyzeDominantColors(ctx, canvas.width, canvas.height);
+      analyzeDominantColors(ctx, w, h);
       stopCamera();
     }
     setIsCapturing(false);
   };
 
-  // Upload card from device file picker
+  // Upload card from device file picker with compression
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -175,18 +189,31 @@ export const CardScannerModal: React.FC<CardScannerModalProps> = ({
     const reader = new FileReader();
     reader.onload = () => {
       const dataUrl = reader.result as string;
-      setCapturedImage(dataUrl);
 
-      // Analyze image
+      // Analyze and downscale image
       const img = new Image();
       img.onload = () => {
+        const maxDim = 900;
+        let w = img.width;
+        let h = img.height;
+        if (w > maxDim || h > maxDim) {
+          if (w > h) {
+            h = Math.round((h * maxDim) / w);
+            w = maxDim;
+          } else {
+            w = Math.round((w * maxDim) / h);
+            h = maxDim;
+          }
+        }
         const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
+        canvas.width = w;
+        canvas.height = h;
         const ctx = canvas.getContext('2d');
         if (ctx) {
-          ctx.drawImage(img, 0, 0);
-          analyzeDominantColors(ctx, img.width, img.height);
+          ctx.drawImage(img, 0, 0, w, h);
+          const compressedUrl = canvas.toDataURL('image/jpeg', 0.65);
+          setCapturedImage(compressedUrl);
+          analyzeDominantColors(ctx, w, h);
         }
       };
       img.src = dataUrl;
@@ -197,7 +224,8 @@ export const CardScannerModal: React.FC<CardScannerModalProps> = ({
 
   // Generate Template & Open in Editor
   const handleCreateTemplate = () => {
-    if (!capturedImage) return;
+    if (!capturedImage || isNavigating) return;
+    setIsNavigating(true);
 
     const uniqueId = `SCAN-${Date.now().toString().slice(-6)}`;
 
@@ -392,15 +420,24 @@ export const CardScannerModal: React.FC<CardScannerModalProps> = ({
     // Initialize all full suite pages (Inside Left, Inside Right, Outside Back, Baraat Pass card)
     newTemplate.suitePages = getDefaultSuitePages(newTemplate);
 
-    // Save to persistent storage
-    saveTemplate(newTemplate);
-
-    onClose();
+    try {
+      // Save to persistent storage and fast in-memory map
+      saveTemplate(newTemplate);
+    } catch (saveErr) {
+      console.warn('saveTemplate caught:', saveErr);
+    }
 
     if (onTemplateCreated) {
       onTemplateCreated(uniqueId);
+      onClose();
     } else {
+      onClose();
       router.push(`/editor/${uniqueId}`);
+      setTimeout(() => {
+        if (typeof window !== 'undefined' && !window.location.pathname.includes(uniqueId)) {
+          window.location.href = `/editor/${uniqueId}`;
+        }
+      }, 250);
     }
   };
 
@@ -683,11 +720,21 @@ export const CardScannerModal: React.FC<CardScannerModalProps> = ({
                 </span>
                 <button
                   type="button"
+                  disabled={isNavigating}
                   onClick={handleCreateTemplate}
-                  className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-gold-500 via-gold-400 to-amber-500 hover:from-gold-600 hover:to-amber-600 text-stone-950 font-serif font-bold text-xs uppercase tracking-wider rounded-xl shadow-lg transition-all flex items-center justify-center gap-2"
+                  className="w-full sm:w-auto px-6 py-3.5 bg-gradient-to-r from-gold-500 via-gold-400 to-amber-500 hover:from-gold-600 hover:to-amber-600 text-stone-950 font-serif font-bold text-xs uppercase tracking-wider rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75"
                 >
-                  <Sparkles className="w-4 h-4" />
-                  <span>Convert to Editable Template &amp; Open Studio →</span>
+                  {isNavigating ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-stone-950 border-t-transparent rounded-full animate-spin" />
+                      <span>Opening Studio...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4" />
+                      <span>Customise this Design &amp; Open Studio →</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>

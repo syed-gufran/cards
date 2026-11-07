@@ -11,6 +11,17 @@ import {
 } from '@/types/wedding-card';
 import { getTemplateById, saveCurrentProject, loadCurrentProject } from '@/utils/storage';
 import { getDefaultSuitePages, SUITE_PAGE_LABELS } from '@/utils/suite-pages';
+import {
+  SUPPORTED_LANGUAGES,
+  SupportedLanguage,
+  convertSuitePagesLanguage,
+} from '@/utils/card-translator';
+import {
+  COLOR_THEME_PRESETS,
+  TEXT_FORMAT_PRESETS,
+  ColorThemePreset,
+  TextFormatPreset,
+} from '@/data/card-presets';
 import { CardCanvas } from '@/components/CardCanvas';
 import { CardEditorControls } from '@/components/CardEditorControls';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -25,6 +36,9 @@ import {
   Layers,
   Smartphone,
   Maximize2,
+  Globe,
+  Palette,
+  CheckCircle2,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -38,6 +52,10 @@ export default function CardEditorPage() {
   // Multi-Page Suite State
   const [currentSuitePage, setCurrentSuitePage] = useState<SuitePageKey>('coverFront');
   const [suitePages, setSuitePages] = useState<Record<SuitePageKey, CardSideDesign> | null>(null);
+
+  // Language & Translation State
+  const [selectedLanguage, setSelectedLanguage] = useState<SupportedLanguage>('en');
+  const [languageToast, setLanguageToast] = useState<string | null>(null);
 
   // Backward-compatible front/back design references
   const [frontDesign, setFrontDesign] = useState<CardSideDesign | null>(null);
@@ -189,6 +207,83 @@ export default function CardEditorPage() {
     }
   };
 
+  // Convert entire card suite text to target language
+  const handleTranslateAll = (lang: SupportedLanguage) => {
+    setSelectedLanguage(lang);
+    if (!suitePages) return;
+    const translated = convertSuitePagesLanguage(suitePages, lang);
+    setSuitePages(translated);
+    setFrontDesign(translated.coverFront);
+    setBackDesign(translated.coverBack);
+    pushHistory(translated);
+
+    const langObj = SUPPORTED_LANGUAGES.find((l) => l.code === lang);
+    setLanguageToast(`Card text converted to ${langObj?.nativeName || lang}! You can still edit any line.`);
+    setTimeout(() => setLanguageToast(null), 3500);
+  };
+
+  // Apply curated Royal color theme across all suite pages
+  const handleApplyColorTheme = (theme: ColorThemePreset) => {
+    if (!suitePages) return;
+    const updatedPages = { ...suitePages };
+    for (const key of Object.keys(updatedPages) as SuitePageKey[]) {
+      const page = updatedPages[key];
+      updatedPages[key] = {
+        ...page,
+        backgroundValue: theme.backgroundColor,
+        borderColor: theme.borderColor,
+        borderFoilEffect: theme.borderFoilEffect,
+        elements: page.elements.map((el) => {
+          const isPrimary = el.category === 'couple' || el.category === 'religious';
+          return {
+            ...el,
+            color: isPrimary ? theme.primaryTextColor : theme.accentTextColor,
+          };
+        }),
+      };
+    }
+    setSuitePages(updatedPages);
+    setFrontDesign(updatedPages.coverFront);
+    setBackDesign(updatedPages.coverBack);
+    pushHistory(updatedPages);
+  };
+
+  // Apply typography and wording layout format to active page
+  const handleApplyTextFormat = (format: TextFormatPreset) => {
+    if (!suitePages || !template) return;
+    const currentActive = suitePages[currentSuitePage] || suitePages.coverFront;
+
+    const newElements = format.elements.map((el) => {
+      let text = el.text;
+      if (el.category === 'couple' && el.label.includes("Bride's Name")) {
+        text = template.sampleBrideName || 'Ananya Sharma';
+      } else if (el.category === 'couple' && el.label.includes("Groom's Name")) {
+        text = template.sampleGroomName || 'Rohan Singhania';
+      }
+      return {
+        id: el.id,
+        label: el.label,
+        category: el.category,
+        text,
+        defaultText: text,
+        xPercent: 50,
+        yPercent: el.yPercent,
+        fontSize: el.fontSize,
+        fontFamily: 'serif' as const,
+        color: currentActive.borderColor || '#D4AF37',
+        fontWeight: el.fontWeight,
+        fontStyle: el.fontStyle,
+        letterSpacing: el.letterSpacing,
+        textAlign: 'center' as const,
+      };
+    });
+
+    handleUpdateActivePage((prev) => ({
+      ...prev,
+      elements: newElements,
+    }));
+  };
+
   const handleSaveProject = () => {
     const defaultSpecs: PrintingSpecification = {
       sizeId: '5x7',
@@ -240,6 +335,28 @@ export default function CardEditorPage() {
               {template.id} • {SUITE_PAGE_LABELS[currentSuitePage]?.shortLabel}
             </span>
           </div>
+        </div>
+
+        {/* 1-Click Multi-Language Converter Quick Bar (Desktop & Tablet) */}
+        <div className="hidden md:flex items-center gap-1 bg-[#FAF7F0] p-1 rounded-xl border border-stone-200">
+          <span className="text-[11px] text-stone-500 font-medium px-1.5 flex items-center gap-1">
+            <Globe className="w-3.5 h-3.5 text-gold-600" />
+            <span className="hidden xl:inline">Language:</span>
+          </span>
+          {SUPPORTED_LANGUAGES.map((lang) => (
+            <button
+              key={lang.code}
+              type="button"
+              onClick={() => handleTranslateAll(lang.code)}
+              className={`px-2 py-0.5 rounded-lg text-xs transition-all ${
+                selectedLanguage === lang.code
+                  ? 'bg-gold-500 text-white font-bold shadow-xs'
+                  : 'text-stone-700 hover:bg-stone-200/80 font-medium'
+              }`}
+            >
+              <span>{lang.flag} {lang.nativeName}</span>
+            </button>
+          ))}
         </div>
 
         {/* Center Mobile View Mode Switcher (Pill for Mobile Screens) */}
@@ -355,6 +472,10 @@ export default function CardEditorPage() {
               onUndo={handleUndo}
               onRedo={handleRedo}
               onReset={handleResetToTemplate}
+              selectedLanguage={selectedLanguage}
+              onTranslateLanguage={handleTranslateAll}
+              onApplyColorTheme={handleApplyColorTheme}
+              onApplyTextFormat={handleApplyTextFormat}
             />
           </div>
         </div>
@@ -403,6 +524,22 @@ export default function CardEditorPage() {
           <ArrowRight className="w-3 h-3" />
         </button>
       </div>
+
+      {/* Language Conversion Toast */}
+      <AnimatePresence>
+        {languageToast && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.9 }}
+            transition={{ duration: 0.2 }}
+            className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-stone-900 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-2.5 text-xs font-semibold border border-gold-400/50 backdrop-blur-md"
+          >
+            <Sparkles className="w-4 h-4 text-gold-400 shrink-0" />
+            <span>{languageToast}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Save Success Toast */}
       <AnimatePresence>

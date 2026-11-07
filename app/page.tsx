@@ -1,11 +1,15 @@
-import React from 'react';
+'use client';
+
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { SAMPLE_TEMPLATES } from '@/data/sample-templates';
+import { DesignTemplate } from '@/types/wedding-card';
 import { MotifIcon } from '@/components/MotifIcons';
 import { BorderFrame } from '@/components/BordersAndFrames';
 import { HomeScannerCta } from '@/components/HomeScannerCta';
 import { AmbientGoldParticles } from '@/components/AmbientGoldParticles';
 import { AnimatedCardTilt } from '@/components/AnimatedCardTilt';
+import { CardFormatModal } from '@/components/CardFormatModal';
 import {
   Sparkles,
   ArrowRight,
@@ -21,6 +25,7 @@ import {
 } from 'lucide-react';
 
 export default function HomePage() {
+  const [formatModalTemplate, setFormatModalTemplate] = useState<DesignTemplate | null>(null);
   const featuredTemplates = SAMPLE_TEMPLATES.filter((t) => t.featured).slice(0, 4);
 
   const categories = [
@@ -359,7 +364,8 @@ export default function HomePage() {
               >
                 {/* Visual Card Preview */}
                 <div
-                  className="relative aspect-[5/7] p-4 flex flex-col justify-between overflow-hidden"
+                  onClick={() => setFormatModalTemplate(template)}
+                  className="relative aspect-[5/7] p-4 flex flex-col justify-between overflow-hidden cursor-pointer"
                   style={{ backgroundColor: template.frontDesign.backgroundValue }}
                 >
                   <BorderFrame
@@ -425,12 +431,13 @@ export default function HomePage() {
                     </p>
                   </div>
 
-                  <Link
-                    href={`/editor/${template.id}`}
-                    className="w-full py-2.5 px-4 rounded-xl bg-gold-500 hover:bg-gold-600 text-white text-xs font-semibold uppercase tracking-wider text-center shadow-xs transition-colors block"
+                  <button
+                    type="button"
+                    onClick={() => setFormatModalTemplate(template)}
+                    className="w-full py-2.5 px-4 rounded-xl bg-gold-500 hover:bg-gold-600 text-white text-xs font-semibold uppercase tracking-wider text-center shadow-xs transition-colors block cursor-pointer"
                   >
                     Customise This Card →
-                  </Link>
+                  </button>
                 </div>
               </div>
             ))}
@@ -509,6 +516,13 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Format & Colorway Interactive Modal */}
+      <CardFormatModal
+        template={formatModalTemplate}
+        isOpen={!!formatModalTemplate}
+        onClose={() => setFormatModalTemplate(null)}
+      />
     </div>
   );
 }
