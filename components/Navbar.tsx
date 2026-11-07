@@ -2,10 +2,12 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Menu, X, Sparkles, Search, Compass, ShieldCheck, Heart } from 'lucide-react';
+import { Menu, X, Sparkles, Search, Compass, ShieldCheck, Heart, Camera } from 'lucide-react';
+import { CardScannerModal } from './CardScannerModal';
 
 export const Navbar: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [scannerOpen, setScannerOpen] = useState(false);
 
   return (
     <header className="sticky top-0 z-40 bg-[#FFFEFA]/95 backdrop-blur-md border-b border-[#ECE2D4]/80 transition-all">
@@ -67,8 +69,17 @@ export const Navbar: React.FC = () => {
             </Link>
           </nav>
 
-          {/* CTA Button */}
-          <div className="hidden sm:flex items-center gap-3">
+          {/* CTA & Scanner Buttons */}
+          <div className="hidden sm:flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => setScannerOpen(true)}
+              className="px-4 py-2 rounded-full bg-white hover:bg-stone-50 text-stone-800 text-xs font-semibold tracking-wider uppercase border border-gold-300 shadow-sm transition-all flex items-center gap-1.5 hover:border-gold-500"
+            >
+              <Camera className="w-3.5 h-3.5 text-gold-600" />
+              <span>Scan Any Card</span>
+            </button>
+
             <Link
               href="/gallery"
               className="px-5 py-2.5 rounded-full bg-gradient-to-r from-gold-600 via-gold-500 to-amber-600 hover:from-gold-700 hover:to-amber-700 text-white text-xs font-semibold tracking-wider uppercase shadow-md shadow-gold-500/20 transition-all transform hover:-translate-y-0.5"
@@ -134,7 +145,18 @@ export const Navbar: React.FC = () => {
           >
             Business Admin Dashboard
           </Link>
-          <div className="pt-2">
+          <div className="pt-2 space-y-2">
+            <button
+              type="button"
+              onClick={() => {
+                setMobileMenuOpen(false);
+                setScannerOpen(true);
+              }}
+              className="w-full text-center py-2.5 bg-white border border-gold-400 text-stone-900 text-xs font-semibold uppercase tracking-wider rounded-xl shadow-xs flex items-center justify-center gap-2"
+            >
+              <Camera className="w-4 h-4 text-gold-600" />
+              <span>Scan Any Card With Camera</span>
+            </button>
             <Link
               href="/gallery"
               onClick={() => setMobileMenuOpen(false)}
@@ -145,6 +167,12 @@ export const Navbar: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Camera Card Scanner Modal */}
+      <CardScannerModal
+        isOpen={scannerOpen}
+        onClose={() => setScannerOpen(false)}
+      />
     </header>
   );
 };

@@ -7,6 +7,8 @@ import { Order } from '@/types/wedding-card';
 import { getOrderById } from '@/utils/storage';
 import { generatePrintReadyPdf, generateCustomerProofPdf } from '@/utils/pdf-generator';
 import confetti from 'canvas-confetti';
+import { motion } from 'framer-motion';
+import { AmbientGoldParticles } from '@/components/AmbientGoldParticles';
 import {
   CheckCircle2,
   Download,
@@ -78,10 +80,16 @@ export default function OrderConfirmationPage() {
   };
 
   return (
-    <div className="bg-[#FAF8F2] min-h-screen py-12">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="bg-[#FAF8F2] min-h-screen py-12 relative overflow-hidden">
+      <AmbientGoldParticles count={30} />
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Celebration Header Card */}
-        <div className="bg-white rounded-3xl p-8 sm:p-12 border border-stone-200 shadow-xl text-center space-y-4 mb-8">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.93, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: 'easeOut' }}
+          className="bg-white rounded-3xl p-8 sm:p-12 border border-stone-200 shadow-xl text-center space-y-4 mb-8 relative overflow-hidden animate-foil-sheen"
+        >
           <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto shadow-inner">
             <CheckCircle2 className="w-10 h-10" />
           </div>
@@ -120,7 +128,7 @@ export default function OrderConfirmationPage() {
               <span>Download Customer Digital Proof PDF</span>
             </button>
           </div>
-        </div>
+        </motion.div>
 
         {/* Order Details & Summary Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">

@@ -74,6 +74,30 @@ export interface CardSideDesign {
   userPhotoPosition?: { xPercent: number; yPercent: number; widthPercent: number };
 }
 
+export type SuitePageKey =
+  | 'coverFront'   // Outside Front Cover
+  | 'insideLeft'    // Inside Left Page (Host & Blessings)
+  | 'insideRight'   // Inside Right Page (Vivah Muhurtham & Vows)
+  | 'coverBack'     // Outside Back (Family RSVP & Residence)
+  | 'baraatCard'    // Baraat / Visiting / Entry Pass Card
+  | 'sangeetCard';  // Mehendi & Sangeet Insert Card
+
+export interface ScannedCardResult {
+  capturedImage: string;
+  detectedOrientation: 'portrait' | 'landscape';
+  detectedColors: {
+    primaryBackground: string;
+    accentColor: string;
+  };
+  extractedTexts?: {
+    brideName?: string;
+    groomName?: string;
+    weddingDate?: string;
+    venue?: string;
+    shloka?: string;
+  };
+}
+
 export interface DesignTemplate {
   id: string; // Unique design ID, e.g. "ROYAL-RAJ-01"
   title: string;
@@ -93,6 +117,7 @@ export interface DesignTemplate {
   themeColor: string; // Accent color hex for badges/previews
   frontDesign: CardSideDesign;
   backDesign: CardSideDesign;
+  suitePages?: Partial<Record<SuitePageKey, CardSideDesign>>;
   sampleBrideName: string;
   sampleGroomName: string;
   sampleWeddingDate: string;
@@ -196,6 +221,7 @@ export interface Order {
   templateTitle: string;
   frontCustomization: CardSideDesign;
   backCustomization: CardSideDesign;
+  suitePages?: Partial<Record<SuitePageKey, CardSideDesign>>;
   events: WeddingEvent[];
   specs: PrintingSpecification;
   priceBreakdown: PriceBreakdown;
@@ -220,6 +246,7 @@ export interface CustomerProject {
   updatedAt: string;
   frontDesign: CardSideDesign;
   backDesign: CardSideDesign;
+  suitePages?: Partial<Record<SuitePageKey, CardSideDesign>>;
   events: WeddingEvent[];
   specs: PrintingSpecification;
 }

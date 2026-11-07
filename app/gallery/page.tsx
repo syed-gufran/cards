@@ -7,6 +7,8 @@ import { DesignTemplate, WeddingCategory } from '@/types/wedding-card';
 import { getTemplates } from '@/utils/storage';
 import { BorderFrame } from '@/components/BordersAndFrames';
 import { MotifIcon } from '@/components/MotifIcons';
+import { AnimatedCardTilt } from '@/components/AnimatedCardTilt';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search,
   Filter,
@@ -17,7 +19,9 @@ import {
   X,
   SlidersHorizontal,
   Check,
+  Camera,
 } from 'lucide-react';
+import { CardScannerModal } from '@/components/CardScannerModal';
 
 function GalleryContent() {
   const searchParams = useSearchParams();
@@ -29,6 +33,7 @@ function GalleryContent() {
   const [maxPrice, setMaxPrice] = useState<number>(100);
   const [flippedCards, setFlippedCards] = useState<Record<string, boolean>>({});
   const [previewTemplate, setPreviewTemplate] = useState<DesignTemplate | null>(null);
+  const [scannerOpen, setScannerOpen] = useState<boolean>(false);
 
   useEffect(() => {
     setTemplates(getTemplates());
@@ -89,7 +94,7 @@ function GalleryContent() {
     <div className="bg-[#FFFEFA] min-h-screen py-10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header & Page Title */}
-        <div className="text-center max-w-3xl mx-auto mb-10 space-y-3">
+        <div className="text-center max-w-3xl mx-auto mb-8 space-y-3">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gold-100 text-gold-800 text-xs font-semibold">
             <Sparkles className="w-3.5 h-3.5" />
             <span>Curated Haute Stationery Catalog</span>
@@ -98,9 +103,37 @@ function GalleryContent() {
             Invitation Design Gallery
           </h1>
           <p className="text-stone-600 text-sm sm:text-base leading-relaxed">
-            Select an invitation template to open in our live customisation studio.
-            Every design features editable text, authentic Indian motifs, and guaranteed print-ready vector PDF delivery.
+            Select an invitation template to open in our live customisation studio, or scan any physical card using your camera to digitize and edit it.
           </p>
+        </div>
+
+        {/* Scan Any Card Camera Feature Banner */}
+        <div className="mb-8 p-5 sm:p-6 bg-gradient-to-r from-stone-900 via-maroon-900 to-stone-900 text-white rounded-2xl border border-gold-500/40 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-4 text-center sm:text-left">
+            <div className="w-12 h-12 rounded-2xl bg-gold-500/20 border border-gold-400/40 text-gold-400 flex items-center justify-center shrink-0">
+              <Camera className="w-6 h-6" />
+            </div>
+            <div>
+              <span className="text-[10px] font-mono font-bold text-gold-400 uppercase tracking-widest">
+                New Smart Card Digitizer
+              </span>
+              <h3 className="font-serif text-lg sm:text-xl font-bold text-white">
+                Have a Card You Already Love? Scan It!
+              </h3>
+              <p className="text-xs text-stone-300 mt-0.5">
+                Point your camera at any wedding card. We extract the artwork, colors, and place editable text so you can customize it immediately.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setScannerOpen(true)}
+            className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-gold-400 via-gold-500 to-amber-500 hover:from-gold-500 hover:to-amber-600 text-stone-950 font-serif font-bold text-xs uppercase tracking-wider rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 shrink-0"
+          >
+            <Camera className="w-4 h-4" />
+            <span>Scan With Camera</span>
+          </button>
         </div>
 
         {/* Filter Controls Bar */}
@@ -197,81 +230,87 @@ function GalleryContent() {
               const activeSideDesign = isFlipped ? template.backDesign : template.frontDesign;
 
               return (
-                <div
+                <motion.div
                   key={template.id}
+                  layout
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.3 }}
                   className="group rounded-2xl overflow-hidden border border-stone-200 bg-white shadow-sm hover:shadow-xl hover:border-gold-400 transition-all flex flex-col"
                 >
-                  {/* Card Visual Stage */}
-                  <div
-                    className="relative aspect-[5/7] p-5 flex flex-col justify-between overflow-hidden cursor-pointer select-none transition-colors"
-                    style={{ backgroundColor: activeSideDesign.backgroundValue }}
-                    onClick={() => setPreviewTemplate(template)}
-                  >
-                    <BorderFrame
-                      style={activeSideDesign.borderStyle}
-                      color={activeSideDesign.borderColor}
-                      isFoil={activeSideDesign.borderFoilEffect}
-                    />
+                  {/* Card Visual Stage with 3D Tilt */}
+                  <AnimatedCardTilt maxTilt={8} className="w-full">
+                    <div
+                      className="relative aspect-[5/7] p-5 flex flex-col justify-between overflow-hidden cursor-pointer select-none transition-colors animate-foil-sheen"
+                      style={{ backgroundColor: activeSideDesign.backgroundValue }}
+                      onClick={() => setPreviewTemplate(template)}
+                    >
+                      <BorderFrame
+                        style={activeSideDesign.borderStyle}
+                        color={activeSideDesign.borderColor}
+                        isFoil={activeSideDesign.borderFoilEffect}
+                      />
 
-                    {/* Top Motif / Emblem */}
-                    <div className="flex justify-center z-10 pt-1">
-                      {activeSideDesign.motifs[0] && (
-                        <MotifIcon
-                          type={activeSideDesign.motifs[0].type}
-                          color={activeSideDesign.motifs[0].color}
-                          size={40}
-                        />
-                      )}
-                    </div>
-
-                    {/* Center Typography Teaser */}
-                    <div className="text-center z-10 my-auto space-y-1">
-                      <div
-                        className="text-[10px] tracking-widest uppercase font-serif"
-                        style={{ color: activeSideDesign.borderColor }}
-                      >
-                        {isFlipped ? 'Itinerary & Celebrations' : `${template.category} Wedding`}
+                      {/* Top Motif / Emblem */}
+                      <div className="flex justify-center z-10 pt-1">
+                        {activeSideDesign.motifs[0] && (
+                          <MotifIcon
+                            type={activeSideDesign.motifs[0].type}
+                            color={activeSideDesign.motifs[0].color}
+                            size={40}
+                          />
+                        )}
                       </div>
-                      <div
-                        className="font-serif text-xl font-bold leading-tight"
-                        style={{ color: activeSideDesign.borderColor }}
-                      >
-                        {isFlipped
-                          ? 'Events Program'
-                          : `${template.sampleBrideName.split(' ')[0]} & ${template.sampleGroomName.split(' ')[0]}`}
-                      </div>
-                      <div
-                        className="text-[10px] font-sans opacity-85"
-                        style={{ color: activeSideDesign.borderColor }}
-                      >
-                        {isFlipped ? 'Haldi • Sangeet • Pheras' : template.sampleWeddingDate}
-                      </div>
-                    </div>
 
-                    {/* Card Top Pill: Design ID & Front/Back Flip Button */}
-                    <div className="absolute top-3 left-3 right-3 flex items-center justify-between z-20">
-                      <span className="text-[9px] font-mono font-bold bg-black/40 backdrop-blur-xs text-white px-2 py-0.5 rounded">
-                        {template.id}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={(e) => toggleCardFlip(template.id, e)}
-                        className="flex items-center gap-1 text-[10px] font-medium bg-white/90 hover:bg-white text-stone-800 px-2 py-0.5 rounded-full shadow-sm transition-all"
-                        title="Flip Front/Back"
-                      >
-                        <Layers className="w-3 h-3 text-gold-600" />
-                        <span>{isFlipped ? 'Show Front' : 'Show Back'}</span>
-                      </button>
-                    </div>
+                      {/* Center Typography Teaser */}
+                      <div className="text-center z-10 my-auto space-y-1">
+                        <div
+                          className="text-[10px] tracking-widest uppercase font-serif"
+                          style={{ color: activeSideDesign.borderColor }}
+                        >
+                          {isFlipped ? 'Itinerary & Celebrations' : `${template.category} Wedding`}
+                        </div>
+                        <div
+                          className="font-serif text-xl font-bold leading-tight"
+                          style={{ color: activeSideDesign.borderColor }}
+                        >
+                          {isFlipped
+                            ? 'Events Program'
+                            : `${template.sampleBrideName.split(' ')[0]} & ${template.sampleGroomName.split(' ')[0]}`}
+                        </div>
+                        <div
+                          className="text-[10px] font-sans opacity-85"
+                          style={{ color: activeSideDesign.borderColor }}
+                        >
+                          {isFlipped ? 'Haldi • Sangeet • Pheras' : template.sampleWeddingDate}
+                        </div>
+                      </div>
 
-                    {/* Hover Inspect Pill */}
-                    <div className="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity z-15 flex items-center justify-center pointer-events-none">
-                      <span className="px-3.5 py-1.5 rounded-full bg-white text-stone-900 text-xs font-semibold shadow-lg flex items-center gap-1.5 transform translate-y-2 group-hover:translate-y-0 transition-transform">
-                        <Eye className="w-3.5 h-3.5 text-gold-600" />
-                        <span>Quick Preview</span>
-                      </span>
+                      {/* Card Top Pill: Design ID & Front/Back Flip Button */}
+                      <div className="absolute top-3 left-3 right-3 flex items-center justify-between z-20">
+                        <span className="text-[9px] font-mono font-bold bg-black/40 backdrop-blur-xs text-white px-2 py-0.5 rounded">
+                          {template.id}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={(e) => toggleCardFlip(template.id, e)}
+                          className="flex items-center gap-1 text-[10px] font-medium bg-white/90 hover:bg-white text-stone-800 px-2 py-0.5 rounded-full shadow-sm transition-all"
+                          title="Flip Front/Back"
+                        >
+                          <Layers className="w-3 h-3 text-gold-600" />
+                          <span>{isFlipped ? 'Show Front' : 'Show Back'}</span>
+                        </button>
+                      </div>
+
+                      {/* Hover Inspect Pill */}
+                      <div className="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity z-15 flex items-center justify-center pointer-events-none">
+                        <span className="px-3.5 py-1.5 rounded-full bg-white text-stone-900 text-xs font-semibold shadow-lg flex items-center gap-1.5 transform translate-y-2 group-hover:translate-y-0 transition-transform">
+                          <Eye className="w-3.5 h-3.5 text-gold-600" />
+                          <span>Quick Preview</span>
+                        </span>
+                      </div>
                     </div>
-                  </div>
+                  </AnimatedCardTilt>
 
                   {/* Card Description & Action Bar */}
                   <div className="p-4 flex-1 flex flex-col justify-between bg-white border-t border-stone-100">
@@ -304,7 +343,7 @@ function GalleryContent() {
                       <ArrowRight className="w-3.5 h-3.5" />
                     </Link>
                   </div>
-                </div>
+                </motion.div>
               );
             })}
           </div>
@@ -399,6 +438,12 @@ function GalleryContent() {
           </div>
         </div>
       )}
+
+      {/* Camera Card Scanner Modal */}
+      <CardScannerModal
+        isOpen={scannerOpen}
+        onClose={() => setScannerOpen(false)}
+      />
     </div>
   );
 }

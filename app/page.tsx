@@ -3,6 +3,9 @@ import Link from 'next/link';
 import { SAMPLE_TEMPLATES } from '@/data/sample-templates';
 import { MotifIcon } from '@/components/MotifIcons';
 import { BorderFrame } from '@/components/BordersAndFrames';
+import { HomeScannerCta } from '@/components/HomeScannerCta';
+import { AmbientGoldParticles } from '@/components/AmbientGoldParticles';
+import { AnimatedCardTilt } from '@/components/AnimatedCardTilt';
 import {
   Sparkles,
   ArrowRight,
@@ -61,7 +64,10 @@ export default function HomePage() {
   return (
     <div className="bg-[#FFFEFA] overflow-hidden">
       {/* 1. HERO SECTION */}
-      <section className="relative pt-12 pb-24 lg:pt-20 lg:pb-32 bg-gradient-to-b from-[#FAF7EE] via-[#F5EED8]/40 to-[#FFFEFA]">
+      <section className="relative pt-12 pb-24 lg:pt-20 lg:pb-32 bg-gradient-to-b from-[#FAF7EE] via-[#F5EED8]/40 to-[#FFFEFA] overflow-hidden">
+        {/* Ambient Floating Gold Particles */}
+        <AmbientGoldParticles count={25} />
+
         {/* Subtle decorative background watermark */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-tr from-gold-200/20 to-amber-100/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -140,58 +146,67 @@ export default function HomePage() {
                   <Link
                     key={template.id}
                     href={`/editor/${template.id}`}
-                    className="group relative rounded-xl overflow-hidden shadow-lg transition-all transform hover:-translate-y-2 hover:shadow-2xl border border-stone-200"
-                    style={{
-                      backgroundColor: template.frontDesign.backgroundValue,
-                    }}
+                    className="group block h-full cursor-pointer transition-transform hover:-translate-y-1"
                   >
-                    {/* Visual Card Representation */}
-                    <div className="relative aspect-[5/7] p-5 flex flex-col justify-between select-none">
-                      <BorderFrame
-                        style={template.frontDesign.borderStyle}
-                        color={template.frontDesign.borderColor}
-                        isFoil={template.frontDesign.borderFoilEffect}
-                      />
-
-                      {/* Top Motif */}
-                      <div className="flex justify-center z-20 pt-2">
-                        {template.frontDesign.motifs[0] && (
-                          <MotifIcon
-                            type={template.frontDesign.motifs[0].type}
-                            color={template.frontDesign.motifs[0].color}
-                            size={44}
+                    <AnimatedCardTilt maxTilt={8} className="h-full">
+                      <div
+                        className="relative block rounded-2xl overflow-hidden shadow-lg border border-stone-200 animate-foil-sheen h-full"
+                        style={{
+                          backgroundColor: template.frontDesign.backgroundValue,
+                        }}
+                      >
+                        {/* Visual Card Representation */}
+                        <div className="relative aspect-[5/7] p-5 flex flex-col justify-between">
+                          <BorderFrame
+                            style={template.frontDesign.borderStyle}
+                            color={template.frontDesign.borderColor}
+                            isFoil={template.frontDesign.borderFoilEffect}
                           />
-                        )}
-                      </div>
 
-                      {/* Couple Title Teaser */}
-                      <div className="text-center z-20 my-auto space-y-1">
-                        <div className="text-[10px] tracking-widest uppercase font-serif" style={{ color: template.frontDesign.borderColor }}>
-                          {template.category} Wedding
-                        </div>
-                        <div
-                          className="font-serif text-xl sm:text-2xl font-bold"
-                          style={{ color: template.frontDesign.borderColor }}
-                        >
-                          {template.sampleBrideName.split(' ')[0]} &amp; {template.sampleGroomName.split(' ')[0]}
-                        </div>
-                        <div className="text-[10px] font-sans opacity-80" style={{ color: template.frontDesign.borderColor }}>
-                          {template.sampleWeddingDate}
-                        </div>
-                      </div>
+                          {/* Top Motif */}
+                          <div className="flex justify-center z-20 pt-2">
+                            {template.frontDesign.motifs[0] && (
+                              <MotifIcon
+                                type={template.frontDesign.motifs[0].type}
+                                color={template.frontDesign.motifs[0].color}
+                                size={44}
+                              />
+                            )}
+                          </div>
 
-                      {/* Bottom Price & Customize Hover Pill */}
-                      <div className="z-20 text-center">
-                        <span className="inline-block px-3 py-1 rounded-full text-[11px] font-semibold bg-white/90 text-stone-900 shadow-sm group-hover:bg-gold-500 group-hover:text-white transition-colors">
-                          Customise this Design →
-                        </span>
+                          {/* Couple Title Teaser */}
+                          <div className="text-center z-20 my-auto space-y-1">
+                            <div className="text-[10px] tracking-widest uppercase font-serif" style={{ color: template.frontDesign.borderColor }}>
+                              {template.category} Wedding
+                            </div>
+                            <div
+                              className="font-serif text-xl sm:text-2xl font-bold"
+                              style={{ color: template.frontDesign.borderColor }}
+                            >
+                              {template.sampleBrideName.split(' ')[0]} &amp; {template.sampleGroomName.split(' ')[0]}
+                            </div>
+                            <div className="text-[10px] font-sans opacity-80" style={{ color: template.frontDesign.borderColor }}>
+                              {template.sampleWeddingDate}
+                            </div>
+                          </div>
+
+                          {/* Bottom Price & Customize Hover Pill */}
+                          <div className="z-20 text-center">
+                            <span className="inline-block px-4 py-2 rounded-full text-xs font-semibold bg-white/95 text-stone-900 shadow-md group-hover:bg-gold-500 group-hover:text-white transition-all transform group-hover:scale-105">
+                              Customise this Design →
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                    </div>
+                    </AnimatedCardTilt>
                   </Link>
                 ))}
               </div>
             </div>
           </div>
+
+          {/* New Camera Scanner Feature Showcase */}
+          <HomeScannerCta />
         </div>
       </section>
 

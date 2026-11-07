@@ -220,13 +220,38 @@ export async function generatePrintReadyPdf(order: Order): Promise<jsPDF> {
     }
   };
 
-  // Render Page 1 (Front Side)
-  renderCardSide(order.frontCustomization, 'Front Side');
+  // Render Multi-Page Suite if present
+  if (order.suitePages) {
+    const pages = order.suitePages;
+    const pageKeys: Array<{ key: keyof typeof pages; title: string }> = [
+      { key: 'coverFront', title: '1. Outside Cover (Front)' },
+      { key: 'insideLeft', title: '2. Inside Left Page (Hosts & Blessings)' },
+      { key: 'insideRight', title: '3. Inside Right Page (Muhurtham & Vows)' },
+      { key: 'coverBack', title: '4. Outside Back (RSVP & Residence)' },
+      { key: 'baraatCard', title: '5. Baraat & Visiting / Entry Pass Card' },
+      { key: 'sangeetCard', title: '6. Mehendi & Sangeet Celebration Insert' },
+    ];
 
-  // Render Page 2 (Back Side) if double sided
-  if (order.specs.sides === 'double') {
-    doc.addPage([totalWidthMm, totalHeightMm], 'portrait');
-    renderCardSide(order.backCustomization, 'Back Side');
+    let isFirstPage = true;
+    for (const p of pageKeys) {
+      const pageDesign = pages[p.key];
+      if (pageDesign) {
+        if (!isFirstPage) {
+          doc.addPage([totalWidthMm, totalHeightMm], 'portrait');
+        }
+        renderCardSide(pageDesign, p.title);
+        isFirstPage = false;
+      }
+    }
+  } else {
+    // Fallback: Render Page 1 (Front Side)
+    renderCardSide(order.frontCustomization, 'Front Side');
+
+    // Render Page 2 (Back Side) if double sided
+    if (order.specs.sides === 'double') {
+      doc.addPage([totalWidthMm, totalHeightMm], 'portrait');
+      renderCardSide(order.backCustomization, 'Back Side');
+    }
   }
 
   return doc;

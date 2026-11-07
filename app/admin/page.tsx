@@ -7,6 +7,7 @@ import {
   OrderStatus,
   DesignTemplate,
   WeddingCategory,
+  SuitePageKey,
 } from '@/types/wedding-card';
 import {
   getOrders,
@@ -15,6 +16,7 @@ import {
   saveTemplate,
 } from '@/utils/storage';
 import { generatePrintReadyPdf, generateCustomerProofPdf } from '@/utils/pdf-generator';
+import { SUITE_PAGE_LABELS } from '@/utils/suite-pages';
 import { BorderFrame } from '@/components/BordersAndFrames';
 import { MotifIcon } from '@/components/MotifIcons';
 import {
@@ -49,7 +51,7 @@ export default function AdminDashboardPage() {
 
   // Selected Order for Inspection Modal
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [modalSide, setModalSide] = useState<'front' | 'back'>('front');
+  const [modalSuitePage, setModalSuitePage] = useState<SuitePageKey>('coverFront');
   const [newStatusInput, setNewStatusInput] = useState<OrderStatus>('New Order');
   const [statusNoteInput, setStatusNoteInput] = useState<string>('');
 
@@ -624,96 +626,102 @@ export default function AdminDashboardPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Left: Card Visual */}
                   <div>
-                    <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
                       <span className="text-xs font-bold text-stone-800">
                         Visual Vector Proof
                       </span>
-                      <div className="flex bg-stone-100 p-0.5 rounded-md text-xs">
-                        <button
-                          type="button"
-                          onClick={() => setModalSide('front')}
-                          className={`px-2.5 py-0.5 rounded ${
-                            modalSide === 'front' ? 'bg-gold-500 text-white font-semibold' : 'text-stone-600'
-                          }`}
-                        >
-                          Front
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setModalSide('back')}
-                          className={`px-2.5 py-0.5 rounded ${
-                            modalSide === 'back' ? 'bg-gold-500 text-white font-semibold' : 'text-stone-600'
-                          }`}
-                        >
-                          Back
-                        </button>
+                      <div className="flex bg-stone-100 p-0.5 rounded-lg text-[11px] overflow-x-auto max-w-full">
+                        {(Object.keys(SUITE_PAGE_LABELS) as SuitePageKey[]).map((key) => {
+                          const info = SUITE_PAGE_LABELS[key];
+                          const isActive = modalSuitePage === key;
+                          return (
+                            <button
+                              key={key}
+                              type="button"
+                              onClick={() => setModalSuitePage(key)}
+                              className={`px-2 py-1 rounded-md font-medium whitespace-nowrap transition-colors ${
+                                isActive
+                                  ? 'bg-gold-500 text-white font-semibold shadow-xs'
+                                  : 'text-stone-600 hover:text-stone-900'
+                              }`}
+                              title={info.label}
+                            >
+                              {info.shortLabel}
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
 
-                    <div
-                      className="relative aspect-[5/7] rounded-xl overflow-hidden p-4 shadow-md select-none"
-                      style={{
-                        backgroundColor:
-                          modalSide === 'front'
-                            ? selectedOrder.frontCustomization.backgroundValue
-                            : selectedOrder.backCustomization.backgroundValue,
-                      }}
-                    >
-                      <BorderFrame
-                        style={
-                          modalSide === 'front'
-                            ? selectedOrder.frontCustomization.borderStyle
-                            : selectedOrder.backCustomization.borderStyle
-                        }
-                        color={
-                          modalSide === 'front'
-                            ? selectedOrder.frontCustomization.borderColor
-                            : selectedOrder.backCustomization.borderColor
-                        }
-                        isFoil={true}
-                      />
+                    {(() => {
+                      const activeCust =
+                        (selectedOrder.suitePages && selectedOrder.suitePages[modalSuitePage]) ||
+                        (modalSuitePage === 'coverBack'
+                          ? selectedOrder.backCustomization
+                          : selectedOrder.frontCustomization);
+                      const isLandscape = modalSuitePage === 'baraatCard';
 
-                      {(modalSide === 'front'
-                        ? selectedOrder.frontCustomization.motifs
-                        : selectedOrder.backCustomization.motifs
-                      ).map((m) => (
-                        <div
-                          key={m.id}
-                          className="absolute transform -translate-x-1/2 -translate-y-1/2"
-                          style={{ left: `${m.position.xPercent}%`, top: `${m.position.yPercent}%` }}
-                        >
-                          <MotifIcon type={m.type} color={m.color} size={m.size * 0.7} />
-                        </div>
-                      ))}
+                      return (
+                        <>
+                          <div className="mb-2 text-[11px] text-stone-500 flex items-center justify-between px-1">
+                            <span>{SUITE_PAGE_LABELS[modalSuitePage]?.description || ''}</span>
+                            <span className="font-semibold text-gold-600 bg-gold-50 px-1.5 py-0.5 rounded border border-gold-200">
+                              {SUITE_PAGE_LABELS[modalSuitePage]?.format || '5" × 7"'}
+                            </span>
+                          </div>
 
-                      <div className="absolute inset-0 z-20">
-                        {(modalSide === 'front'
-                          ? selectedOrder.frontCustomization.elements
-                          : selectedOrder.backCustomization.elements
-                        ).map((el) => (
                           <div
-                            key={el.id}
-                            className="absolute transform -translate-x-1/2 -translate-y-1/2 whitespace-pre-line leading-relaxed"
+                            className={`relative ${
+                              isLandscape ? 'aspect-[7/5]' : 'aspect-[5/7]'
+                            } rounded-xl overflow-hidden p-4 shadow-md select-none border border-stone-200 transition-all duration-300`}
                             style={{
-                              left: `${el.xPercent}%`,
-                              top: `${el.yPercent}%`,
-                              width: '85%',
-                              fontSize: `clamp(7px, ${el.fontSize * 0.28}px, 18px)`,
-                              color: el.color,
-                              fontWeight: el.fontWeight || 'normal',
-                              fontStyle: el.fontStyle || 'normal',
-                              textAlign: el.textAlign || 'center',
-                              fontFamily:
-                                el.fontFamily === 'serif'
-                                ? 'var(--font-cormorant), Georgia, serif'
-                                : 'var(--font-jakarta), sans-serif',
+                              backgroundColor: activeCust.backgroundValue,
                             }}
                           >
-                            {el.text}
+                            <BorderFrame
+                              style={activeCust.borderStyle}
+                              color={activeCust.borderColor}
+                              isFoil={true}
+                            />
+
+                            {activeCust.motifs.map((m) => (
+                              <div
+                                key={m.id}
+                                className="absolute transform -translate-x-1/2 -translate-y-1/2"
+                                style={{ left: `${m.position.xPercent}%`, top: `${m.position.yPercent}%` }}
+                              >
+                                <MotifIcon type={m.type} color={m.color} size={m.size * 0.7} />
+                              </div>
+                            ))}
+
+                            <div className="absolute inset-0 z-20">
+                              {activeCust.elements.map((el) => (
+                                <div
+                                  key={el.id}
+                                  className="absolute transform -translate-x-1/2 -translate-y-1/2 whitespace-pre-line leading-relaxed"
+                                  style={{
+                                    left: `${el.xPercent}%`,
+                                    top: `${el.yPercent}%`,
+                                    width: '85%',
+                                    fontSize: `clamp(7px, ${el.fontSize * 0.28}px, 18px)`,
+                                    color: el.color,
+                                    fontWeight: el.fontWeight || 'normal',
+                                    fontStyle: el.fontStyle || 'normal',
+                                    textAlign: el.textAlign || 'center',
+                                    fontFamily:
+                                      el.fontFamily === 'serif'
+                                        ? 'var(--font-cormorant), Georgia, serif'
+                                        : 'var(--font-jakarta), sans-serif',
+                                  }}
+                                >
+                                  {el.text}
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                        ))}
-                      </div>
-                    </div>
+                        </>
+                      );
+                    })()}
 
                     <div className="mt-4 flex gap-2">
                       <button

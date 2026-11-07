@@ -9,16 +9,21 @@ import {
   DesignTemplate,
   CardSideDesign,
   WeddingEvent,
+  SuitePageKey,
 } from '@/types/wedding-card';
 import {
   getTemplateById,
   loadCurrentProject,
   createOrder,
 } from '@/utils/storage';
+import { getDefaultSuitePages, SUITE_PAGE_LABELS } from '@/utils/suite-pages';
 import { calculatePrice } from '@/data/pricing-data';
 import { PrintingSpecsSelector } from '@/components/PrintingSpecsSelector';
 import { BorderFrame } from '@/components/BordersAndFrames';
 import { MotifIcon } from '@/components/MotifIcons';
+import { AnimatedCardTilt } from '@/components/AnimatedCardTilt';
+import { InteractiveEnvelopePreview } from '@/components/InteractiveEnvelopePreview';
+import { motion, AnimatePresence } from 'framer-motion';
 import { generatePrintReadyPdf, generateCustomerProofPdf, validateOrderForPrint } from '@/utils/pdf-generator';
 import {
   CheckCircle2,
@@ -41,11 +46,13 @@ function CheckoutContent() {
   const [template, setTemplate] = useState<DesignTemplate | null>(null);
   const [frontDesign, setFrontDesign] = useState<CardSideDesign | null>(null);
   const [backDesign, setBackDesign] = useState<CardSideDesign | null>(null);
+  const [suitePages, setSuitePages] = useState<Record<SuitePageKey, CardSideDesign> | null>(null);
   const [events, setEvents] = useState<WeddingEvent[]>([]);
 
   // Step 1: Specs, Step 2: Proof & Address, Step 3: Payment
   const [currentStep, setCurrentStep] = useState<'specs' | 'review' | 'payment'>('specs');
-  const [previewSide, setPreviewSide] = useState<'front' | 'back'>('front');
+  const [previewPageKey, setPreviewPageKey] = useState<SuitePageKey>('coverFront');
+  const [envelopeModalOpen, setEnvelopeModalOpen] = useState(false);
 
   // Printing Specs
   const [specs, setSpecs] = useState<PrintingSpecification>({
@@ -85,13 +92,20 @@ function CheckoutContent() {
       if (savedProject && savedProject.templateId === t.id) {
         setFrontDesign(savedProject.frontDesign);
         setBackDesign(savedProject.backDesign);
+        if (savedProject.suitePages) {
+          setSuitePages(savedProject.suitePages as Record<SuitePageKey, CardSideDesign>);
+        } else {
+          setSuitePages(getDefaultSuitePages(t));
+        }
         setEvents(savedProject.events || []);
         if (savedProject.specs) {
           setSpecs(savedProject.specs);
         }
       } else {
-        setFrontDesign(t.frontDesign);
-        setBackDesign(t.backDesign);
+        const defaultPages = getDefaultSuitePages(t);
+        setSuitePages(defaultPages);
+        setFrontDesign(defaultPages.coverFront);
+        setBackDesign(defaultPages.coverBack);
       }
     }
   }, [templateIdParam]);
@@ -136,6 +150,7 @@ function CheckoutContent() {
         templateTitle: template.title,
         frontCustomization: frontDesign,
         backCustomization: backDesign,
+        suitePages: suitePages || undefined,
         events,
         specs,
         priceBreakdown,
@@ -245,97 +260,117 @@ function CheckoutContent() {
             {/* LEFT COLUMN: VISUAL PROOF & WEDDING DETAILS (6 Cols) */}
             <div className="lg:col-span-6 space-y-6">
               {/* Card Physical Visual Proof */}
-              <div className="bg-white p-6 rounded-2xl border border-stone-200 shadow-sm">
-                <div className="flex items-center justify-between mb-4">
+              <div className="bg-white p-5 sm:p-6 rounded-2xl border border-stone-200 shadow-sm space-y-4">
+                <div className="flex items-center justify-between gap-2">
                   <div>
                     <h3 className="font-serif text-lg font-bold text-stone-900">
                       Final Visual Proof
                     </h3>
                     <p className="text-[11px] text-stone-500">
-                      Verify spelling, names, timings &amp; venue details
+                      Verify spelling, names, timings &amp; venue details across all invitation suite pages
                     </p>
                   </div>
-                  <div className="flex bg-stone-100 p-1 rounded-full text-xs">
-                    <button
-                      type="button"
-                      onClick={() => setPreviewSide('front')}
-                      className={`px-3 py-1 rounded-full font-medium transition-all ${
-                        previewSide === 'front'
-                          ? 'bg-gold-500 text-white shadow-xs'
-                          : 'text-stone-600'
-                      }`}
-                    >
-                      Front Side
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPreviewSide('back')}
-                      className={`px-3 py-1 rounded-full font-medium transition-all ${
-                        previewSide === 'back'
-                          ? 'bg-gold-500 text-white shadow-xs'
-                          : 'text-stone-600'
-                      }`}
-                    >
-                      Back Side
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEnvelopeModalOpen(true)}
+                    className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-gold-500/15 via-amber-400/20 to-gold-500/15 hover:from-gold-500/25 text-amber-950 font-serif font-bold text-xs border border-gold-300 shadow-xs transition-all hover:scale-105"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-gold-600" />
+                    <span>3D Envelope Unbox</span>
+                  </button>
                 </div>
 
-                {/* Card Canvas Scaled Container */}
-                <div className="flex justify-center py-4 bg-[#F5EED8]/30 rounded-xl border border-stone-200">
-                  <div
-                    className="relative w-[300px] sm:w-[340px] aspect-[5/7] rounded shadow-xl overflow-hidden select-none"
-                    style={{
-                      backgroundColor:
-                        previewSide === 'front'
-                          ? frontDesign.backgroundValue
-                          : backDesign.backgroundValue,
-                    }}
-                  >
-                    <BorderFrame
-                      style={previewSide === 'front' ? frontDesign.borderStyle : backDesign.borderStyle}
-                      color={previewSide === 'front' ? frontDesign.borderColor : backDesign.borderColor}
-                      isFoil={true}
-                    />
-
-                    {/* Motifs */}
-                    {(previewSide === 'front' ? frontDesign.motifs : backDesign.motifs).map((m) => (
-                      <div
-                        key={m.id}
-                        className="absolute transform -translate-x-1/2 -translate-y-1/2"
-                        style={{ left: `${m.position.xPercent}%`, top: `${m.position.yPercent}%` }}
+                {/* Suite Page Navigation Pills */}
+                <div className="flex items-center gap-1 overflow-x-auto scrollbar-none py-1 border-y border-stone-100">
+                  {(['coverFront', 'insideLeft', 'insideRight', 'coverBack', 'baraatCard', 'sangeetCard'] as SuitePageKey[]).map((key) => {
+                    const isSelected = previewPageKey === key;
+                    const meta = SUITE_PAGE_LABELS[key];
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setPreviewPageKey(key)}
+                        className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold whitespace-nowrap transition-all ${
+                          isSelected
+                            ? 'bg-gold-500 text-white shadow-xs'
+                            : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                        }`}
                       >
-                        <MotifIcon type={m.type} color={m.color} size={m.size * 0.75} />
-                      </div>
-                    ))}
+                        {meta?.shortLabel || key}
+                      </button>
+                    );
+                  })}
+                </div>
 
-                    {/* Text Elements */}
-                    <div className="absolute inset-0 z-20">
-                      {(previewSide === 'front' ? frontDesign.elements : backDesign.elements).map((el) => (
+                {/* Card Canvas Scaled Container with 3D Tilt */}
+                {(() => {
+                  const activeProofDesign =
+                    (suitePages && suitePages[previewPageKey]) ||
+                    (previewPageKey === 'coverBack' ? backDesign : frontDesign);
+                  const isBaraat = previewPageKey === 'baraatCard';
+
+                  if (!activeProofDesign) return null;
+
+                  return (
+                    <div className="flex justify-center py-4 bg-[#F5EED8]/30 rounded-xl border border-stone-200 overflow-hidden">
+                      <AnimatedCardTilt maxTilt={7}>
                         <div
-                          key={el.id}
-                          className="absolute transform -translate-x-1/2 -translate-y-1/2 whitespace-pre-line leading-relaxed"
+                          className={`relative rounded shadow-xl overflow-hidden select-none transition-all animate-foil-sheen ${
+                            isBaraat ? 'w-[320px] sm:w-[380px] aspect-[7/5]' : 'w-[260px] sm:w-[310px] aspect-[5/7]'
+                          }`}
                           style={{
-                            left: `${el.xPercent}%`,
-                            top: `${el.yPercent}%`,
-                            width: el.widthPercent ? `${el.widthPercent}%` : '85%',
-                            fontSize: `clamp(8px, ${el.fontSize * 0.3}px, 20px)`,
-                            color: el.color,
-                            fontWeight: el.fontWeight || 'normal',
-                            fontStyle: el.fontStyle || 'normal',
-                            textAlign: el.textAlign || 'center',
-                            fontFamily:
-                              el.fontFamily === 'serif'
-                                ? 'var(--font-cormorant), Georgia, serif'
-                                : 'var(--font-jakarta), sans-serif',
+                            backgroundColor: activeProofDesign.backgroundValue.startsWith('#')
+                              ? activeProofDesign.backgroundValue
+                              : '#FAF8F2',
                           }}
                         >
-                          {el.text}
+                          <BorderFrame
+                            style={activeProofDesign.borderStyle}
+                            color={activeProofDesign.borderColor}
+                            isFoil={true}
+                          />
+
+                          {/* Motifs */}
+                          {activeProofDesign.motifs.map((m) => (
+                            <div
+                              key={m.id}
+                              className="absolute transform -translate-x-1/2 -translate-y-1/2"
+                              style={{ left: `${m.position.xPercent}%`, top: `${m.position.yPercent}%` }}
+                            >
+                              <MotifIcon type={m.type} color={m.color} size={m.size * 0.7} />
+                            </div>
+                          ))}
+
+                          {/* Text Elements */}
+                          <div className="absolute inset-0 z-20">
+                            {activeProofDesign.elements.map((el) => (
+                              <div
+                                key={el.id}
+                                className="absolute transform -translate-x-1/2 -translate-y-1/2 whitespace-pre-line leading-relaxed"
+                                style={{
+                                  left: `${el.xPercent}%`,
+                                  top: `${el.yPercent}%`,
+                                  width: el.widthPercent ? `${el.widthPercent}%` : '85%',
+                                  fontSize: `clamp(7px, ${el.fontSize * (isBaraat ? 0.28 : 0.29)}px, 18px)`,
+                                  color: el.color,
+                                  fontWeight: el.fontWeight || 'normal',
+                                  fontStyle: el.fontStyle || 'normal',
+                                  textAlign: el.textAlign || 'center',
+                                  fontFamily:
+                                    el.fontFamily === 'serif'
+                                      ? 'var(--font-cormorant), Georgia, serif'
+                                      : 'var(--font-jakarta), sans-serif',
+                                }}
+                              >
+                                {el.text}
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      ))}
+                      </AnimatedCardTilt>
                     </div>
-                  </div>
-                </div>
+                  );
+                })()}
               </div>
 
               {/* Multi-Events Review */}
@@ -569,6 +604,16 @@ function CheckoutContent() {
           </div>
         )}
       </div>
+
+      {/* 3D Envelope Unboxing Modal */}
+      {frontDesign && (
+        <InteractiveEnvelopePreview
+          isOpen={envelopeModalOpen}
+          onClose={() => setEnvelopeModalOpen(false)}
+          cardDesign={frontDesign}
+          coupleNames={customer.fullName || 'Bride & Groom'}
+        />
+      )}
     </div>
   );
 }

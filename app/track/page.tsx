@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { Order, OrderStatus } from '@/types/wedding-card';
 import { getOrders } from '@/utils/storage';
 import { generateCustomerProofPdf, generatePrintReadyPdf } from '@/utils/pdf-generator';
+import { motion } from 'framer-motion';
 import {
   Search,
   Package,
@@ -202,9 +203,14 @@ function OrderTrackingContent() {
         )}
 
         {searchedOrder && (
-          <div className="space-y-6">
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, ease: 'easeOut' }}
+            className="space-y-6"
+          >
             {/* Order Status Banner */}
-            <div className="bg-white p-6 rounded-2xl border border-stone-200 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="bg-white p-6 rounded-2xl border border-stone-200 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-foil-sheen">
               <div>
                 <span className="text-[10px] font-mono font-bold text-gold-700 uppercase tracking-widest">
                   Live Order Tracker
@@ -243,7 +249,7 @@ function OrderTrackingContent() {
                           state === 'completed'
                             ? 'bg-emerald-500 text-white ring-4 ring-emerald-100'
                             : state === 'current'
-                            ? 'bg-gold-500 text-white ring-4 ring-gold-200 animate-pulse'
+                            ? 'bg-gold-500 text-white ring-4 ring-gold-200 animate-pulse-gold'
                             : 'bg-stone-200 text-stone-500'
                         }`}
                       >
@@ -318,7 +324,7 @@ function OrderTrackingContent() {
                 </button>
               </div>
             </div>
-          </div>
+          </motion.div>
         )}
       </div>
     </div>

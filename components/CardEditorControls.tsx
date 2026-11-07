@@ -7,9 +7,12 @@ import {
   BorderStyle,
   MotifType,
   WeddingEvent,
+  SuitePageKey,
 } from '@/types/wedding-card';
 import { INDIAN_WORDING_LIBRARY } from '@/data/indian-wording-library';
+import { SUITE_PAGE_LABELS } from '@/utils/suite-pages';
 import { MotifIcon } from './MotifIcons';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Type,
   Palette,
@@ -29,10 +32,18 @@ import {
   Bold,
   Italic,
   Upload,
+  Lock,
+  Move,
+  ArrowUp,
+  ArrowDown,
+  ArrowLeft,
+  ArrowRight,
 } from 'lucide-react';
 
 interface CardEditorControlsProps {
-  currentSide: 'front' | 'back';
+  currentSide?: 'front' | 'back';
+  currentSuitePage?: SuitePageKey;
+  onSuitePageChange?: (page: SuitePageKey) => void;
   sideDesign: CardSideDesign;
   onUpdateSideDesign: (updater: (prev: CardSideDesign) => CardSideDesign) => void;
   selectedElementId: string | null;
@@ -47,7 +58,9 @@ interface CardEditorControlsProps {
 }
 
 export const CardEditorControls: React.FC<CardEditorControlsProps> = ({
-  currentSide,
+  currentSide = 'front',
+  currentSuitePage = 'coverFront',
+  onSuitePageChange,
   sideDesign,
   onUpdateSideDesign,
   selectedElementId,
@@ -60,7 +73,7 @@ export const CardEditorControls: React.FC<CardEditorControlsProps> = ({
   onRedo,
   onReset,
 }) => {
-  const [activeTab, setActiveTab] = useState<'text' | 'typography' | 'design' | 'events' | 'photo'>('text');
+  const [activeTab, setActiveTab] = useState<'text' | 'typography' | 'position' | 'events'>('text');
   const [showWordingModal, setShowWordingModal] = useState<boolean>(false);
   const [wordingFaith, setWordingFaith] = useState<string>('Hindu');
 
@@ -130,22 +143,6 @@ export const CardEditorControls: React.FC<CardEditorControlsProps> = ({
     setShowWordingModal(false);
   };
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      onUpdateSideDesign((prev) => ({
-        ...prev,
-        userPhotoUrl: result,
-        userPhotoPosition: { xPercent: 50, yPercent: 25, widthPercent: 22 },
-      }));
-    };
-    reader.readAsDataURL(file);
-  };
-
   // Color Swatches
   const colorPresets = [
     { label: 'Royal 24K Gold', hex: '#D4AF37' },
@@ -160,57 +157,38 @@ export const CardEditorControls: React.FC<CardEditorControlsProps> = ({
     { label: 'Crisp White', hex: '#FFFFFF' },
   ];
 
-  const backgroundPresets = [
-    { label: 'Warm Royal Ivory', value: '#FAF8F2' },
-    { label: 'Deep Crimson Velvet', value: '#4D0711' },
-    { label: 'Mughal Emerald Green', value: '#022C22' },
-    { label: 'Midnight Constellation', value: '#0B1120' },
-    { label: 'Pichwai Sage', value: '#23382E' },
-    { label: 'Blush Rose Silk', value: '#FFF8F6' },
-    { label: 'Imperial Noir Slate', value: '#141414' },
-    { label: 'Pure Pearl Linen', value: '#FFFEFA' },
-  ];
-
-  const borderStyles: Array<{ id: BorderStyle; label: string }> = [
-    { id: 'royal-filigree', label: 'Royal Filigree & Crest' },
-    { id: 'mughal-arch', label: 'Mughal Polylobed Arch' },
-    { id: 'mandala-corner', label: 'Mandala Corner Medallions' },
-    { id: 'ornate-gold', label: '24K Ornate Gold Frame' },
-    { id: 'minimal-double', label: 'Minimalist Double Hairline' },
-    { id: 'floral-vine', label: 'Botanical Floral Vines' },
-    { id: 'pichwai-arch', label: 'Pichwai Temple Arch' },
-    { id: 'geometric-jali', label: 'Islamic Star & Jali Lattice' },
-  ];
-
-  const motifOptions: Array<{ type: MotifType; label: string }> = [
-    { type: 'ganesha', label: 'Lord Ganesha' },
-    { type: 'bismillah', label: 'Bismillah Calligraphy' },
-    { type: 'ek_onkar', label: 'Ik Onkar Symbol' },
-    { type: 'kalash', label: 'Sacred Kalash' },
-    { type: 'lotus', label: 'Padma Lotus' },
-    { type: 'peacock', label: 'Royal Peacock' },
-    { type: 'doli', label: 'Bridal Doli' },
-    { type: 'monogram', label: 'Monogram Wreath' },
-    { type: 'rings', label: 'Sparkling Rings' },
-    { type: 'paisley', label: 'Kashmiri Paisley' },
-    { type: 'none', label: 'No Motif' },
-  ];
-
   return (
     <div className="flex flex-col h-full bg-white border-l border-stone-200 shadow-xl overflow-hidden">
-      {/* Top Header with History Controls */}
-      <div className="flex items-center justify-between px-5 py-3.5 bg-stone-50 border-b border-stone-200">
-        <div>
-          <h3 className="font-serif font-bold text-base text-stone-900 tracking-wide">
-            Design Studio Controls
-          </h3>
-          <p className="text-[11px] text-stone-500">
-            Editing {currentSide === 'front' ? 'Front Side' : 'Back Side (Itinerary)'}
-          </p>
+      {/* Top Header with Page Selector & History Controls */}
+      <div className="flex items-center justify-between px-4 sm:px-5 py-3 bg-stone-50 border-b border-stone-200 shrink-0">
+        <div className="flex items-center gap-2">
+          {onSuitePageChange ? (
+            <select
+              value={currentSuitePage}
+              onChange={(e) => onSuitePageChange(e.target.value as SuitePageKey)}
+              className="font-serif font-bold text-xs sm:text-sm text-stone-900 bg-white border border-gold-300 rounded-lg px-2.5 py-1.5 focus:ring-1 focus:ring-gold-500 shadow-xs cursor-pointer max-w-[200px] sm:max-w-[260px] truncate"
+            >
+              <option value="coverFront">1. Outer Cover (Outside Front)</option>
+              <option value="insideLeft">2. Inside Left (Hosts &amp; Blessings)</option>
+              <option value="insideRight">3. Inside Right (Muhurtham &amp; Vows)</option>
+              <option value="coverBack">4. Outer Back (RSVP &amp; Residence)</option>
+              <option value="baraatCard">5. Baraat / Visiting Pass Card</option>
+              <option value="sangeetCard">6. Mehendi &amp; Sangeet Insert</option>
+            </select>
+          ) : (
+            <div>
+              <h3 className="font-serif font-bold text-sm text-stone-900">
+                Design Studio Controls
+              </h3>
+              <p className="text-[11px] text-stone-500">
+                Editing {currentSide === 'front' ? 'Front Side' : 'Back Side'}
+              </p>
+            </div>
+          )}
         </div>
 
         {/* History Action Buttons */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 shrink-0">
           <button
             type="button"
             onClick={onUndo}
@@ -233,7 +211,7 @@ export const CardEditorControls: React.FC<CardEditorControlsProps> = ({
             type="button"
             onClick={onReset}
             title="Reset to Template Default"
-            className="p-1.5 text-stone-600 hover:text-rose-700 rounded hover:bg-rose-50 transition-colors ml-1"
+            className="p-1.5 text-stone-600 hover:text-rose-700 rounded hover:bg-rose-50 transition-colors ml-0.5"
           >
             <RotateCcw className="w-4 h-4" />
           </button>
@@ -252,7 +230,7 @@ export const CardEditorControls: React.FC<CardEditorControlsProps> = ({
           }`}
         >
           <Type className="w-4 h-4" />
-          <span>Wording & Names</span>
+          <span>Wording &amp; Names</span>
         </button>
 
         <button
@@ -265,20 +243,20 @@ export const CardEditorControls: React.FC<CardEditorControlsProps> = ({
           }`}
         >
           <Palette className="w-4 h-4" />
-          <span>Typography</span>
+          <span>Fonts &amp; Colors</span>
         </button>
 
         <button
           type="button"
-          onClick={() => setActiveTab('design')}
+          onClick={() => setActiveTab('position')}
           className={`flex items-center gap-1.5 py-3 px-3 border-b-2 text-xs font-medium whitespace-nowrap transition-colors ${
-            activeTab === 'design'
+            activeTab === 'position'
               ? 'border-gold-500 text-gold-700 font-semibold'
               : 'border-transparent text-stone-500 hover:text-stone-900'
           }`}
         >
-          <Sparkles className="w-4 h-4" />
-          <span>Motifs & Frame</span>
+          <Move className="w-4 h-4" />
+          <span>Move &amp; Position</span>
         </button>
 
         <button
@@ -293,26 +271,35 @@ export const CardEditorControls: React.FC<CardEditorControlsProps> = ({
           <Calendar className="w-4 h-4" />
           <span>Multi-Events ({events.length})</span>
         </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('photo')}
-          className={`flex items-center gap-1.5 py-3 px-3 border-b-2 text-xs font-medium whitespace-nowrap transition-colors ${
-            activeTab === 'photo'
-              ? 'border-gold-500 text-gold-700 font-semibold'
-              : 'border-transparent text-stone-500 hover:text-stone-900'
-          }`}
-        >
-          <ImageIcon className="w-4 h-4" />
-          <span>Monogram / Photo</span>
-        </button>
       </div>
 
       {/* Main Tab Content Scroll Area */}
       <div className="flex-1 overflow-y-auto p-5 space-y-5">
-        {/* TAB 1: WORDING & TEXT FIELDS */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.18 }}
+            className="space-y-5"
+          >
+            {/* TAB 1: WORDING & TEXT FIELDS */}
         {activeTab === 'text' && (
           <div className="space-y-4">
+            {/* Baraat Card Quick Info Banner */}
+            {currentSuitePage === 'baraatCard' && (
+              <div className="p-3 bg-amber-50 border border-amber-300 rounded-xl space-y-1">
+                <span className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-700" />
+                  <span>Baraat &amp; Visiting Pass Card Active</span>
+                </span>
+                <p className="text-[11px] text-amber-800 leading-relaxed">
+                  Customize Baraat assembly timing, horse procession route, valet parking access, and guest helpline numbers for your wedding guests.
+                </p>
+              </div>
+            )}
+
             {/* Indian Shlokas & Wording Presets Action Pill */}
             <div className="p-3.5 bg-gradient-to-r from-gold-50 to-amber-50 rounded-xl border border-gold-200">
               <div className="flex items-center justify-between mb-2">
@@ -586,117 +573,171 @@ export const CardEditorControls: React.FC<CardEditorControlsProps> = ({
           </div>
         )}
 
-        {/* TAB 3: MOTIFS & DESIGN FRAMES */}
-        {activeTab === 'design' && (
+        {/* TAB 3: MOVE & POSITION CONTROLS */}
+        {activeTab === 'position' && selectedElement && (
           <div className="space-y-5">
-            {/* Background Color Palette */}
-            <div>
-              <label className="block text-xs font-semibold text-stone-700 mb-1.5">
-                Card Background Color
-              </label>
-              <div className="grid grid-cols-4 gap-2">
-                {backgroundPresets.map((bg) => (
-                  <button
-                    key={bg.value}
-                    type="button"
-                    onClick={() =>
-                      onUpdateSideDesign((prev) => ({
-                        ...prev,
-                        backgroundValue: bg.value,
-                      }))
-                    }
-                    className={`flex flex-col items-center gap-1 p-1.5 rounded-lg border text-center transition-all ${
-                      sideDesign.backgroundValue === bg.value
-                        ? 'border-gold-500 ring-1 ring-gold-500 bg-gold-50/30'
-                        : 'border-stone-200 hover:border-stone-300'
-                    }`}
-                  >
-                    <span
-                      className="w-8 h-8 rounded-md border border-stone-300 shadow-inner"
-                      style={{ backgroundColor: bg.value }}
-                    />
-                    <span className="text-[10px] text-stone-700 leading-tight">
-                      {bg.label}
-                    </span>
-                  </button>
-                ))}
+            {/* Design Lock Guarantee Pill */}
+            <div className="p-3 bg-stone-50 border border-gold-200/80 rounded-xl flex items-start gap-2.5">
+              <div className="w-5 h-5 rounded-full bg-gold-100 flex items-center justify-center text-gold-700 shrink-0 mt-0.5">
+                <Lock className="w-3 h-3" />
+              </div>
+              <div className="text-[11px] leading-relaxed">
+                <strong className="text-stone-900 block font-serif">Original Artwork &amp; Borders Locked</strong>
+                <span className="text-stone-500">
+                  The artisanal borders and temple motifs are protected to preserve print perfection. You have full freedom to reposition, center, and align all text lines.
+                </span>
               </div>
             </div>
 
-            {/* Decorative Border Frame Style */}
-            <div>
-              <label className="block text-xs font-semibold text-stone-700 mb-1.5">
-                Decorative Border Style
+            {/* Element Picker Header */}
+            <div className="p-3 bg-gold-50/60 border border-gold-200 rounded-xl space-y-2">
+              <span className="text-[10px] font-mono font-bold text-gold-700 uppercase tracking-widest block">
+                Selected Text Element to Move
+              </span>
+              <select
+                value={selectedElement.id}
+                onChange={(e) => onSelectElement(e.target.value)}
+                className="w-full text-xs font-semibold bg-white border border-gold-300 rounded-lg p-2 text-stone-900 focus:ring-1 focus:ring-gold-500 shadow-xs"
+              >
+                {sideDesign.elements.map((el) => (
+                  <option key={el.id} value={el.id}>
+                    {el.label}: &quot;{el.text?.slice(0, 24) || el.defaultText?.slice(0, 24)}...&quot;
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Fine-Tuning Move Pad */}
+            <div className="bg-stone-50 p-4 rounded-xl border border-stone-200 space-y-3">
+              <label className="text-xs font-bold text-stone-800 block text-center">
+                Directional Nudge Pad (Precision Placement)
               </label>
-              <div className="grid grid-cols-2 gap-2">
-                {borderStyles.map((b) => (
+              <div className="flex flex-col items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() =>
+                    updateElementProps(selectedElement.id, {
+                      yPercent: Math.max(5, selectedElement.yPercent - 2),
+                    })
+                  }
+                  className="p-2.5 bg-white hover:bg-gold-50 text-stone-700 hover:text-gold-700 rounded-lg border border-stone-200 shadow-xs transition-colors"
+                  title="Move Up"
+                >
+                  <ArrowUp className="w-4 h-4" />
+                </button>
+                <div className="flex items-center gap-2">
                   <button
-                    key={b.id}
                     type="button"
                     onClick={() =>
-                      onUpdateSideDesign((prev) => ({
-                        ...prev,
-                        borderStyle: b.id,
-                      }))
+                      updateElementProps(selectedElement.id, {
+                        xPercent: Math.max(10, selectedElement.xPercent - 2),
+                      })
                     }
-                    className={`p-2.5 rounded-lg border text-left text-xs transition-all ${
-                      sideDesign.borderStyle === b.id
-                        ? 'border-gold-500 bg-gold-50/50 font-bold text-gold-900 shadow-sm'
-                        : 'border-stone-200 hover:border-stone-300 text-stone-700'
-                    }`}
+                    className="p-2.5 bg-white hover:bg-gold-50 text-stone-700 hover:text-gold-700 rounded-lg border border-stone-200 shadow-xs transition-colors"
+                    title="Move Left"
                   >
-                    {b.label}
+                    <ArrowLeft className="w-4 h-4" />
                   </button>
-                ))}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      updateElementProps(selectedElement.id, {
+                        xPercent: 50,
+                      })
+                    }
+                    className="px-3.5 py-2 bg-gradient-to-r from-gold-500 to-amber-600 hover:from-gold-600 hover:to-amber-700 text-white rounded-lg font-serif font-bold text-xs shadow-xs transition-all"
+                    title="Center Horizontally (X: 50%)"
+                  >
+                    Center
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      updateElementProps(selectedElement.id, {
+                        xPercent: Math.min(90, selectedElement.xPercent + 2),
+                      })
+                    }
+                    className="p-2.5 bg-white hover:bg-gold-50 text-stone-700 hover:text-gold-700 rounded-lg border border-stone-200 shadow-xs transition-colors"
+                    title="Move Right"
+                  >
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    updateElementProps(selectedElement.id, {
+                      yPercent: Math.min(95, selectedElement.yPercent + 2),
+                    })
+                  }
+                  className="p-2.5 bg-white hover:bg-gold-50 text-stone-700 hover:text-gold-700 rounded-lg border border-stone-200 shadow-xs transition-colors"
+                  title="Move Down"
+                >
+                  <ArrowDown className="w-4 h-4" />
+                </button>
               </div>
             </div>
 
-            {/* Traditional Indian Motifs Selection */}
-            <div>
-              <label className="block text-xs font-semibold text-stone-700 mb-1.5">
-                Traditional Indian Motifs
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                {motifOptions.map((m) => {
-                  const currentMotifType = sideDesign.motifs[0]?.type || 'none';
-                  const isSelected = currentMotifType === m.type;
-
-                  return (
-                    <button
-                      key={m.type}
-                      type="button"
-                      onClick={() => {
-                        if (m.type === 'none') {
-                          onUpdateSideDesign((prev) => ({ ...prev, motifs: [] }));
-                        } else {
-                          onUpdateSideDesign((prev) => ({
-                            ...prev,
-                            motifs: [
-                              {
-                                id: `motif-${Date.now()}`,
-                                type: m.type,
-                                position: { xPercent: 50, yPercent: 12 },
-                                size: 54,
-                                color: sideDesign.borderColor || '#D4AF37',
-                              },
-                            ],
-                          }));
-                        }
-                      }}
-                      className={`flex flex-col items-center gap-1.5 p-2 rounded-lg border text-center transition-all ${
-                        isSelected
-                          ? 'border-gold-500 bg-gold-50/50 font-semibold text-gold-900 shadow-sm'
-                          : 'border-stone-200 hover:border-stone-300 text-stone-600'
-                      }`}
-                    >
-                      <div className="w-9 h-9 flex items-center justify-center">
-                        <MotifIcon type={m.type} size={32} color="#D4AF37" />
-                      </div>
-                      <span className="text-[10px] leading-tight">{m.label}</span>
-                    </button>
-                  );
-                })}
+            {/* Sliders for Direct Numerical Adjustment */}
+            <div className="space-y-4">
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="text-xs font-semibold text-stone-700">Horizontal Position (X %)</label>
+                  <span className="text-xs font-mono text-stone-500">{selectedElement.xPercent}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="10"
+                  max="90"
+                  value={selectedElement.xPercent}
+                  onChange={(e) =>
+                    updateElementProps(selectedElement.id, { xPercent: Number(e.target.value) })
+                  }
+                  className="w-full accent-gold-500 h-1.5 bg-stone-200 rounded-lg cursor-pointer"
+                />
               </div>
+
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="text-xs font-semibold text-stone-700">Vertical Position (Y %)</label>
+                  <span className="text-xs font-mono text-stone-500">{selectedElement.yPercent}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="5"
+                  max="95"
+                  value={selectedElement.yPercent}
+                  onChange={(e) =>
+                    updateElementProps(selectedElement.id, { yPercent: Number(e.target.value) })
+                  }
+                  className="w-full accent-gold-500 h-1.5 bg-stone-200 rounded-lg cursor-pointer"
+                />
+              </div>
+
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="text-xs font-semibold text-stone-700">Text Box Width (% of card)</label>
+                  <span className="text-xs font-mono text-stone-500">
+                    {selectedElement.widthPercent || 85}%
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="30"
+                  max="95"
+                  value={selectedElement.widthPercent || 85}
+                  onChange={(e) =>
+                    updateElementProps(selectedElement.id, { widthPercent: Number(e.target.value) })
+                  }
+                  className="w-full accent-gold-500 h-1.5 bg-stone-200 rounded-lg cursor-pointer"
+                />
+              </div>
+            </div>
+
+            {/* Canvas Direct Drag Tip */}
+            <div className="p-3 bg-stone-50 border border-stone-200 rounded-xl flex items-center gap-2 text-stone-600 text-xs">
+              <Move className="w-4 h-4 text-gold-600 shrink-0" />
+              <span>You can also click &amp; drag this text block anywhere on the card canvas directly.</span>
             </div>
           </div>
         )}
@@ -801,64 +842,8 @@ export const CardEditorControls: React.FC<CardEditorControlsProps> = ({
             )}
           </div>
         )}
-
-        {/* TAB 5: PHOTO & MONOGRAM UPLOAD */}
-        {activeTab === 'photo' && (
-          <div className="space-y-4">
-            <div>
-              <h4 className="text-xs font-bold text-stone-800">Upload Couple Portrait or Family Crest</h4>
-              <p className="text-[11px] text-stone-500">
-                Incorporate your pre-wedding portrait or custom gold foil monogram onto the card.
-              </p>
-            </div>
-
-            <div className="border-2 border-dashed border-stone-300 rounded-xl p-6 text-center hover:border-gold-400 transition-colors bg-stone-50/50">
-              <Upload className="w-8 h-8 text-stone-400 mx-auto mb-2" />
-              <p className="text-xs text-stone-700 font-medium mb-1">
-                Upload High-Resolution Photo or PNG Logo
-              </p>
-              <p className="text-[10px] text-stone-400 mb-3">PNG, JPG, SVG up to 10MB</p>
-              <label className="inline-block px-4 py-2 bg-white border border-stone-300 rounded-lg text-xs font-semibold text-stone-800 shadow-sm hover:bg-stone-50 cursor-pointer">
-                Select File
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handlePhotoUpload}
-                  className="hidden"
-                />
-              </label>
-            </div>
-
-            {sideDesign.userPhotoUrl && (
-              <div className="p-3 bg-stone-50 border border-stone-200 rounded-xl flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={sideDesign.userPhotoUrl}
-                    alt="Uploaded photo"
-                    className="w-12 h-12 rounded-full object-cover border border-gold-400"
-                  />
-                  <div>
-                    <span className="text-xs font-semibold text-stone-800">Photo Placed on Card</span>
-                    <p className="text-[10px] text-stone-500">Rendered in high resolution</p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() =>
-                    onUpdateSideDesign((prev) => ({
-                      ...prev,
-                      userPhotoUrl: undefined,
-                    }))
-                  }
-                  className="text-stone-400 hover:text-rose-600 p-1"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            )}
-          </div>
-        )}
+          </motion.div>
+        </AnimatePresence>
       </div>
 
       {/* POPUP MODAL: INDIAN WORDING & SHLOKAS LIBRARY */}
